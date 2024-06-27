@@ -1,0 +1,27 @@
+{
+  "bridge": {
+    "name": "Homebridge",
+    "username": "CD:22:3D:E3:CE:30",
+    "port": 51826,
+    "pin": "031-45-156"
+  },
+  "description": "iRobot implementation for Homebridge",
+  "platforms": [],
+  "plugins": [
+    "Homebridge-iRobot"
+  ],
+  "accessories": [
+    {
+      "accessory": "iRobot",
+      "name": "Roomba",
+      "model": "980",
+      "blid": "1234567890",
+      "robotpwd": "Password123",
+      "ipaddress": "192.168.0.2",
+      "autoRefreshEnabled": true,
+      "keepAliveEnabled": true,
+      "cacheTTL": 30
+    }
+  ],
+  "debug": false
+}
