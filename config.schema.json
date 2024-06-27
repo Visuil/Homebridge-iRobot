@@ -1,5 +1,5 @@
 {
-    "pluginAlias": "iRobot",
+    "pluginAlias": "irobot",
     "pluginType": "platform",
     "customUi": true,
     "singular": true,
@@ -8,7 +8,17 @@
         "properties": {
             "name": {
                 "title": "Name",
-                "description": "Name of the iRobot platform in Homebridge.",
+                "description": "Name of the iRobot platform in Homebridge",
+                "type": "string"
+            },
+            "irobot-username": {
+                "title": "iRobot Username",
+                "description": "Username of the iRobot account attached to your devices",
+                "type": "string"
+            },
+            "irobot-password": {
+                "title": "iRobot Password",
+                "description": "Password of the iRobot account attached to your devices",
                 "type": "string"
             },
             "devices": {
@@ -100,7 +110,7 @@
                                         { "title": "No", "enum": [0] }
                                     ],
                                     "condition": {
-                                        "functionBody": "return model.cleanBehaviour === 'rooms';"
+                                        "functionBody": "return model.cleanBehavior === 'rooms';"
                                     }
                                 },
                                 "pmap_id": {
@@ -108,7 +118,7 @@
                                     "title": "Pmap Id",
                                     "required": true,
                                     "condition": {
-                                        "functionBody": "return model.cleanBehaviour === 'rooms';"
+                                        "functionBody": "return model.cleanBehavior === 'rooms';"
                                     }
                                 },
                                 "regions": {
@@ -148,7 +158,7 @@
                                         }
                                     },
                                     "condition": {
-                                        "functionBody": "return model.cleanBehaviour === 'rooms';"
+                                        "functionBody": "return model.cleanBehavior === 'rooms';"
                                     }
                                 },
                                 "user_pmapv_id": {
@@ -156,12 +166,12 @@
                                     "title": "User Pmapv Id",
                                     "required": true,
                                     "condition": {
-                                        "functionBody": "return model.cleanBehaviour === 'rooms';"
+                                        "functionBody": "return model.cleanBehavior === 'rooms';"
                                     }
                                 }
                             }
                         },
-                        "stopBehaviour": {
+                        "stopBehavior": {
                             "type": "string",
                             "title": "When Roomba is turned off",
                             "required": true,
@@ -209,14 +219,11 @@
                         "devices[].blid",
                         "devices[].password",
                         "devices[].ipaddress",
-                        "devices[].model",
                         "devices[].homeSwitch",
-                        "devices[].model",
                         "devices[].dockContactSensor",
                         "devices[].dockingContactSensor",
                         "devices[].runningContactSensor",
                         "devices[].binContactSensor",
-                        "devices[].model",
                         "devices[].cleanBehavior",
                         "devices[].mission.pmap_id",
                         "devices[].mission.user_pmapv_id",
@@ -225,7 +232,7 @@
                         "devices[].mission.regions[].params.noAutoPasses",
                         "devices[].mission.regions[].params.twoPass",
                         "devices[].mission.ordered",
-                        "devices[].stopBehaviour"
+                        "devices[].stopBehavior"
                     ]
                 }
             ]
