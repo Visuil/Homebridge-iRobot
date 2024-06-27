@@ -1,10 +1,11 @@
 {
-  "name": "Homebridge-iRobot",
+  "displayName": "Homebridge iRobot",
+  "name": "homebridge-irobot",
   "description": "iRobot implementation for Homebridge",
   "version": "0.1",
   "engines": {
-    "homebridge": ">=0.2.0",
-    "node": ">=10"
+    "node": "^18.17.0 || ^20.9.0",
+    "homebridge": "^1.6.0"
   },
   "author": {
     "name": "Visuil"
@@ -18,11 +19,27 @@
   "homepage": "https://github.com/Visuil/Homebridge-iRobot",
   "keywords": [
     "homebridge-plugin",
-    "iRobot",
-    "Roomba"
+    "irobot",
+    "roomba",
+    "vacuum",
+    "mop"
   ],
   "license": "GPLv3",
   "main": "./dist/index.js",
+  "funding": [
+    {
+      "type": "github",
+      "url": "https://github.com/sponsors/joshdoehla"
+    },
+    {
+      "type": "buymeacoffee",
+      "url": "https://www.buymeacoffee.com/joshdoehla"
+    },
+    {
+      "type": "patreon",
+      "url": "https://www.patreon.com/joshdoehla"
+    }
+  ],
   "repository": {
     "type": "git",
     "url": "git://github.com/Visuil/Homebridge-iRobot.git"

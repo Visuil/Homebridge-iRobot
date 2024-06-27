@@ -9,15 +9,15 @@ const robot_blid = process.argv[2];
 const robot_pwd = process.argv[3];
 const robot_ip_address = process.argv[4];
 
-const myRobotViaLocal = new dorita980.Local(robot_blid, robot_pwd, robot_ip_address);
+const iRobot = new dorita980.Local(robot_blid, robot_pwd, robot_ip_address);
 
-myRobotViaLocal.on('connect', init);
+iRobot.on('connect', init);
 
 function init() {
-  myRobotViaLocal.getRobotState(['lastCommand'])
+  iRobot.getRobotState(['lastCommand'])
     .then(result => {
       console.log("lastCommand:", result.lastCommand, ", regionsDetails:", result.lastCommand.regions);
-      myRobotViaLocal.end();
+      iRobot.end();
     })
     .catch(console.log);
 }
