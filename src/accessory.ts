@@ -74,6 +74,7 @@ interface IRobotStatus {
   charging?: boolean;
   binFull?: boolean;
   docking?: boolean;
+  paused?: boolean;
 }
 
 export class IRobotAccessory implements AccessoryPlugin {
@@ -173,50 +174,50 @@ export class IRobotAccessory implements AccessoryPlugin {
   private registerEventHandlers() {
 	this.switchService
 		.getCharacteristic(this.api.hap.Characteristic.On)
-  		.on(CharacteristicEventTypes.SET, this.setRunningState.bind(this))
-  		.on(CharacteristicEventTypes.GET, this.createCharacteristicGetter("Running status", this.runningStatus.bind(this)));
+  		.on('set' as any, this.setRunningState.bind(this))
+  		.on('get' as any, this.createCharacteristicGetter("Running status", this.runningStatus.bind(this)));
 
 	this.batteryService
   		.getCharacteristic(this.api.hap.Characteristic.BatteryLevel)
-  		.on(CharacteristicEventTypes.GET, this.createCharacteristicGetter("Battery level", this.batteryLevelStatus.bind(this)));
+  		.on('get' as any, this.createCharacteristicGetter("Battery level", this.batteryLevelStatus.bind(this)));
 
 	this.batteryService
 	  .getCharacteristic(this.api.hap.Characteristic.ChargingState)
-	  .on(CharacteristicEventTypes.GET, this.createCharacteristicGetter("Charging status", this.chargingStatus.bind(this)));
+	  .on('get' as any, this.createCharacteristicGetter("Charging status", this.chargingStatus.bind(this)));
 
 	this.batteryService
 	  .getCharacteristic(this.api.hap.Characteristic.StatusLowBattery)
-	  .on(CharacteristicEventTypes.GET, this.createCharacteristicGetter("Low Battery status", this.batteryStatus.bind(this)));
+	  .on('get' as any, this.createCharacteristicGetter("Low Battery status", this.batteryStatus.bind(this)));
 
 	this.filterMaintenance
 	  .getCharacteristic(this.api.hap.Characteristic.FilterChangeIndication)
-	  .on(CharacteristicEventTypes.GET, this.createCharacteristicGetter("Bin status", this.binStatus.bind(this)));
+	  .on('get' as any, this.createCharacteristicGetter("Bin status", this.binStatus.bind(this)));
 
 	if (this.dockService) {
 	  this.dockService
 		.getCharacteristic(this.api.hap.Characteristic.ContactSensorState)
-		.on(CharacteristicEventTypes.GET, this.createCharacteristicGetter("Dock status", this.dockedStatus.bind(this)));
+		.on('get' as any, this.createCharacteristicGetter("Dock status", this.dockedStatus.bind(this)));
 	}
 	if (this.runningService) {
 	  this.runningService
 		.getCharacteristic(this.api.hap.Characteristic.ContactSensorState)
-		.on(CharacteristicEventTypes.GET, this.createCharacteristicGetter("Running status", this.runningStatus.bind(this)));
+		.on('get' as any, this.createCharacteristicGetter("Running status", this.runningStatus.bind(this)));
 	}
 	if (this.binService) {
 	  this.binService
 		.getCharacteristic(this.api.hap.Characteristic.ContactSensorState)
-		.on(CharacteristicEventTypes.GET, this.createCharacteristicGetter("Bin status", this.binStatus.bind(this)));
+		.on('get' as any, this.createCharacteristicGetter("Bin status", this.binStatus.bind(this)));
 	}
 	if (this.dockingService) {
 	  this.dockingService
 		.getCharacteristic(this.api.hap.Characteristic.ContactSensorState)
-		.on(CharacteristicEventTypes.GET, this.createCharacteristicGetter("Docking status", this.dockingStatus.bind(this)));
+		.on('get' as any, this.createCharacteristicGetter("Docking status", this.dockingStatus.bind(this)));
 	}
 	if (this.homeService) {
 	  this.homeService
 		.getCharacteristic(this.api.hap.Characteristic.On)
-		.on(CharacteristicEventTypes.SET, this.setDockingState.bind(this))
-		.on(CharacteristicEventTypes.GET, this.createCharacteristicGetter("Returning Home", this.dockingStatus.bind(this)));
+		.on('set' as any, this.setDockingState.bind(this))
+		.on('get' as any, this.createCharacteristicGetter("Returning Home", this.dockingStatus.bind(this)));
 	}
   }
 
