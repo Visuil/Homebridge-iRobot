@@ -4,12 +4,10 @@ import {
   PlatformAccessory,
   Logging,
   PlatformConfig,
-  Service,
-  Characteristic,
   APIEvent,
 } from 'homebridge';
 import { PLUGIN_NAME, PLATFORM_NAME } from './settings';
-import IRobotAccessory from './accessory';
+import { IRobotAccessory } from './accessory';  // Ensure IRobotAccessory is a named export from accessory.ts
 import dorita980 from 'dorita980';
 
 interface DeviceConfig {
