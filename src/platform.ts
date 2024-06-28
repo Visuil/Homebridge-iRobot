@@ -1,4 +1,4 @@
-import { AccessoryConfig, AccessoryPlugin, API, Logging, Service, CharacteristicValue, CharacteristicGetCallback, CharacteristicSetCallback } from "homebridge";
+import { AccessoryConfig, AccessoryPlugin, API, Logging, Service, CharacteristicValue, CharacteristicGetCallback, CharacteristicSetCallback, DynamicPlatformPlugin, PlatformAccessory, APIEvent } from "homebridge";
 import { PLUGIN_NAME, PLATFORM_NAME } from './settings';
 import { IRobotAccessory } from './accessory';
 import dorita980, { RobotMission, RobotState, Roomba } from "dorita980";
