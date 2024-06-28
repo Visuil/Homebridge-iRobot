@@ -1,6 +1,6 @@
-const dorita980 = require("dorita980");
-const { Local } = dorita980;
-const { AccessoryPlugin, Service, Characteristic } = require("homebridge");
+import dorita980 from "dorita980";
+import { Local } from "dorita980";
+import { AccessoryPlugin, Service, Characteristic, Logging, API } from "homebridge";
 
 // Constants
 const CONNECT_TIMEOUT_MILLIS = 60_000;
@@ -14,13 +14,13 @@ const ROBOT_CIPHERS = ["AES128-SHA256", "TLS_AES_256_GCM_SHA384"];
 const NO_VALUE = new Error("No value");
 
 // Helper Functions
-async function delay(duration) {
+async function delay(duration: number): Promise<void> {
     return new Promise((resolve) => {
         setTimeout(resolve, duration);
     });
 }
 
-function millisToString(millis) {
+function millisToString(millis: number): string {
     if (millis < 1_000) {
         return `${millis}ms`;
     } else if (millis < 60_000) {
@@ -30,7 +30,7 @@ function millisToString(millis) {
     }
 }
 
-function shouldTryDifferentCipher(error) {
+function shouldTryDifferentCipher(error: Error): boolean {
     if (error.message.indexOf("TLS") !== -1) {
         return true;
     }
@@ -40,15 +40,70 @@ function shouldTryDifferentCipher(error) {
     return false;
 }
 
-class RoombaAccessory {
-    constructor(log, config, api) {
+interface Config {
+    debug?: boolean;
+    name: string;
+    model: string;
+    serialnum: string;
+    blid: string;
+    robotpwd: string;
+    ipaddress: string;
+    cleanBehaviour?: string;
+    mission?: string;
+    stopBehaviour?: string;
+    idleWatchInterval?: number;
+    dockContactSensor?: boolean;
+    runningContactSensor?: boolean;
+    binContactSensor?: boolean;
+    dockingContactSensor?: boolean;
+    homeSwitch?: boolean;
+}
+
+interface RoombaStatus {
+    running?: boolean;
+    batteryLevel?: number;
+    charging?: boolean;
+    binFull?: boolean;
+    docking?: boolean;
+}
+
+class RoombaAccessory implements AccessoryPlugin {
+    private readonly api: API;
+    private readonly log: Logging;
+    private readonly debug: boolean;
+    private readonly name: string;
+    private readonly model: string;
+    private readonly serialnum: string;
+    private readonly blid: string;
+    private readonly robotpwd: string;
+    private readonly ipaddress: string;
+    private readonly cleanBehaviour: string;
+    private readonly mission?: string;
+    private readonly stopBehaviour: string;
+    private readonly idlePollIntervalMillis: number;
+    private lastRefreshState: number = 0;
+    private lastPollInterval: number = 0;
+    private cachedStatus: RoombaStatus = {};
+    private _currentRoombaPromise?: Promise<{ roomba: any, useCount: number }>;
+    private currentCipherIndex: number = 0;
+    private readonly accessoryInfo: Service;
+    private readonly filterMaintenance: Service;
+    private readonly switchService: Service;
+    private readonly batteryService: Service;
+    private dockService?: Service;
+    private runningService?: Service;
+    private binService?: Service;
+    private dockingService?: Service;
+    private homeService?: Service;
+
+    constructor(log: Logging, config: Config, api: API) {
         this.api = api;
         this.debug = !!config.debug;
 
         this.log = !this.debug
             ? log
             : Object.assign(log, {
-                debug: (message, ...parameters) => {
+                debug: (message: string, ...parameters: unknown[]) => {
                     log.info(`DEBUG: ${message}`, ...parameters);
                 },
             });
@@ -61,13 +116,13 @@ class RoombaAccessory {
         this.cleanBehaviour = config.cleanBehaviour !== undefined ? config.cleanBehaviour : "everywhere";
         this.mission = config.mission;
         this.stopBehaviour = config.stopBehaviour !== undefined ? config.stopBehaviour : "home";
-        this.idlePollIntervalMillis = (config.idleWatchInterval * 60_000) || 900_000;
+        this.idlePollIntervalMillis = (config.idleWatchInterval || 15) * 60_000;
 
         const showDockAsContactSensor = config.dockContactSensor === undefined ? true : config.dockContactSensor;
-        const showRunningAsContactSensor = config.runningContactSensor;
-        const showBinStatusAsContactSensor = config.binContactSensor;
-        const showDockingAsContactSensor = config.dockingContactSensor;
-        const showHomeSwitch = config.homeSwitch;
+        const showRunningAsContactSensor = !!config.runningContactSensor;
+        const showBinStatusAsContactSensor = !!config.binContactSensor;
+        const showDockingAsContactSensor = !!config.dockingContactSensor;
+        const showHomeSwitch = !!config.homeSwitch;
 
         this.accessoryInfo = new Service.AccessoryInformation();
         this.filterMaintenance = new Service.FilterMaintenance(this.name);
@@ -105,7 +160,7 @@ class RoombaAccessory {
         this.startPolling();
     }
 
-    registerEventHandlers() {
+    private registerEventHandlers() {
         this.switchService
             .getCharacteristic(Characteristic.On)
             .on("set", this.setRunningState.bind(this))
@@ -161,13 +216,13 @@ class RoombaAccessory {
             if (error || !roomba) {
                 return;
             }
-            roomba.find().catch((err) => {
+            roomba.find().catch((err: Error) => {
                 this.log.warn("Roomba failed to locate: %s", err.message);
             });
         });
     }
 
-    getServices() {
+    getServices(): Service[] {
         const services = [
             this.accessoryInfo,
             this.switchService,
@@ -194,7 +249,7 @@ class RoombaAccessory {
         return services;
     }
 
-    refreshState(callback) {
+    private refreshState(callback: (success: boolean) => void) {
         const now = Date.now();
 
         this.connect((error, roomba) => {
@@ -206,8 +261,8 @@ class RoombaAccessory {
 
             const startedWaitingForStatus = Date.now();
 
-            new Promise((resolve) => {
-                let receivedState = undefined;
+            new Promise<void>((resolve) => {
+                let receivedState: RoombaStatus | undefined;
 
                 const timeout = setTimeout(() => {
                     this.log.debug(
@@ -219,7 +274,7 @@ class RoombaAccessory {
                     callback(false);
                 }, STATUS_TIMEOUT_MILLIS);
 
-                const updateState = (state) => {
+                const updateState = (state: RoombaStatus) => {
                     receivedState = state;
 
                     if (this.receivedRobotStateIsComplete(state)) {
@@ -241,17 +296,17 @@ class RoombaAccessory {
         });
     }
 
-    receivedRobotStateIsComplete(state) {
-        return state.batPct != undefined && state.bin !== undefined && state.cleanMissionStatus !== undefined;
+    private receivedRobotStateIsComplete(state: RoombaStatus): boolean {
+        return state.batteryLevel !== undefined && state.binFull !== undefined && state.docking !== undefined;
     }
 
-    receiveRobotState(state) {
+    private receiveRobotState(state: RoombaStatus): boolean {
         const parsed = this.parseState(state);
         this.mergeCachedStatus(parsed);
         return true;
     }
 
-    connectedRoomba(attempts = 0) {
+    private connectedRoomba(attempts = 0): Promise<{ roomba: any, useCount: number }> {
         return new Promise((resolve, reject) => {
             let connected = false;
             let failed = false;
@@ -269,9 +324,9 @@ class RoombaAccessory {
                 reject(new Error("Connect timed out"));
             }, CONNECT_TIMEOUT_MILLIS);
 
-            roomba.on("state", (state) => { this.receiveRobotState(state); });
+            roomba.on("state", (state: RoombaStatus) => { this.receiveRobotState(state); });
 
-            const onError = (error) => {
+            const onError = (error: Error) => {
                 this.log.debug("Connection received error: %s", error.message);
 
                 roomba.off("error", onError);
@@ -315,7 +370,7 @@ class RoombaAccessory {
         });
     }
 
-    connect(callback) {
+    private connect(callback: (error: Error | null, roomba?: any) => void) {
         const promise = this._currentRoombaPromise || this.connectedRoomba();
         this._currentRoombaPromise = promise;
 
@@ -337,7 +392,7 @@ class RoombaAccessory {
         });
     }
 
-    setRunningState(powerOn, callback) {
+    private setRunningState(powerOn: boolean, callback: (error?: Error) => void) {
         if (powerOn) {
             this.log.info("Starting Roomba");
 
@@ -351,7 +406,7 @@ class RoombaAccessory {
                     roomba.resume().then(() => {
                         callback();
                         this.refreshStatusForUser();
-                    }).catch((err) => {
+                    }).catch((err: Error) => {
                         this.log.warn("Roomba failed: %s", err.message);
                         callback(err);
                     });
@@ -361,7 +416,7 @@ class RoombaAccessory {
                             this.log.debug("Roomba is cleaning your rooms");
                             callback();
                             this.refreshStatusForUser();
-                        }).catch((err) => {
+                        }).catch((err: Error) => {
                             this.log.warn("Roomba failed: %s", err.message);
                             callback(err);
                         });
@@ -370,7 +425,7 @@ class RoombaAccessory {
                             this.log.debug("Roomba is running");
                             callback();
                             this.refreshStatusForUser();
-                        }).catch((err) => {
+                        }).catch((err: Error) => {
                             this.log.warn("Roomba failed: %s", err.message);
                             callback(err);
                         });
@@ -386,7 +441,7 @@ class RoombaAccessory {
                     return;
                 }
 
-                roomba.getRobotState(["cleanMissionStatus"]).then((response) => {
+                roomba.getRobotState(["cleanMissionStatus"]).then((response: RoombaStatus) => {
                     const state = this.parseState(response);
 
                     if (state.running) {
@@ -401,7 +456,7 @@ class RoombaAccessory {
                             } else {
                                 this.log.debug("Roomba is paused");
                             }
-                        }).catch((err) => {
+                        }).catch((err: Error) => {
                             this.log.warn("Roomba failed: %s", err.message);
                             callback(err);
                         });
@@ -410,7 +465,7 @@ class RoombaAccessory {
                         roomba.pause().then(() => {
                             callback();
                             this.log.debug("Roomba paused");
-                        }).catch((err) => {
+                        }).catch((err: Error) => {
                             this.log.warn("Roomba failed: %s", err.message);
                             callback(err);
                         });
@@ -423,7 +478,7 @@ class RoombaAccessory {
                     }
 
                     this.refreshStatusForUser();
-                }).catch((err) => {
+                }).catch((err: Error) => {
                     this.log.warn("Roomba failed: %s", err.message);
                     callback(err);
                 });
@@ -431,7 +486,7 @@ class RoombaAccessory {
         }
     }
 
-    setDockingState(docking, callback) {
+    private setDockingState(docking: boolean, callback: (error?: Error) => void) {
         this.log.debug("Setting docking state to %s", JSON.stringify(docking));
 
         this.connect((error, roomba) => {
@@ -445,7 +500,7 @@ class RoombaAccessory {
                     this.log.debug("Roomba is docking");
                     callback();
                     this.refreshStatusForUser();
-                }).catch((err) => {
+                }).catch((err: Error) => {
                     this.log.warn("Roomba failed: %s", err.message);
                     callback(err);
                 });
@@ -454,7 +509,7 @@ class RoombaAccessory {
                     this.log.debug("Roomba is paused");
                     callback();
                     this.refreshStatusForUser();
-                }).catch((err) => {
+                }).catch((err: Error) => {
                     this.log.warn("Roomba failed: %s", err.message);
                     callback(err);
                 });
@@ -462,95 +517,88 @@ class RoombaAccessory {
         });
     }
 
-    async dockWhenStopped(roomba, pollingInterval) {
-        try {
-            const state = await roomba.getRobotState(["cleanMissionStatus"]);
+    private async dockWhenStopped(roomba: any, pollingInterval: number) {
+            try {
+                const state = await roomba.getRobotState(["cleanMissionStatus"]);
 
-            switch (state.cleanMissionStatus.phase) {
-                case "stop":
-                    this.log.debug("Roomba has stopped, issuing dock request");
-                    await roomba.dock();
-                    this.log.debug("Roomba docking");
-                    this.refreshStatusForUser();
-                    break;
-                case "run":
-                    this.log.debug("Roomba is still running. Will check again in %is", pollingInterval / 1000);
-                    await delay(pollingInterval);
-                    this.log.debug("Trying to dock again...");
-                    await this.dockWhenStopped(roomba, pollingInterval);
-                    break;
-                default:
-                    this.log.debug("Roomba is not running");
-                    break;
-            }
-        } catch (error) {
-            this.log.warn("Roomba failed to dock: %s", error.message);
-        }
-    }
-
-    createCharacteristicGetter(name, extractValue) {
-        return (callback) => {
-            const maxCacheAge = (this.lastPollInterval || 0) + STATUS_TIMEOUT_MILLIS * 2;
-
-            const returnCachedStatus = (status) => {
-                const value = extractValue(status);
-                if (value !== undefined) {
-                    callback(null, value);
-                } else {
-                    callback(NO_VALUE);
+                switch (state.cleanMissionStatus.phase) {
+                    case "stop":
+                        this.log.debug("Roomba has stopped, issuing dock request");
+                        await roomba.dock();
+                        this.log.debug("Roomba docking");
+                        this.refreshStatusForUser();
+                        break;
+                    case "run":
+                        this.log.debug("Roomba is still running. Will check again in %is", pollingInterval / 1000);
+                        await delay(pollingInterval);
+                        this.log.debug("Trying to dock again...");
+                        await this.dockWhenStopped(roomba, pollingInterval);
+                        break;
+                    default:
+                        this.log.debug("Roomba is in unexpected state: %s", state.cleanMissionStatus.phase);
+                        break;
                 }
-            };
-
-            if (Date.now() - this.lastRefreshState < maxCacheAge) {
-                this.log.debug("Returning cached %s: %s", name, JSON.stringify(this.cachedStatus));
-                returnCachedStatus(this.cachedStatus);
-            } else {
-                this.refreshState((success) => {
-                    if (success) {
-                        this.log.debug("Returning refreshed %s: %s", name, JSON.stringify(this.cachedStatus));
-                        returnCachedStatus(this.cachedStatus);
-                    } else {
-                        callback(NO_VALUE);
-                    }
-                });
+            } catch (error) {
+                this.log.warn("Roomba failed to dock: %s", (error as Error).message);
             }
+        }
+
+    refreshStatusForUser() {
+        this.log.debug("Fetching updated status for user");
+
+        if (this.refreshToken) {
+            clearTimeout(this.refreshToken);
+            this.refreshToken = null;
+        }
+
+        this.refreshState((success) => {
+            if (success) {
+                this.log.debug("User status updated, scheduling next update");
+                this.scheduleNextUpdate();
+            } else {
+                this.log.debug("Failed to update user status");
+            }
+        });
+    }
+
+    scheduleNextUpdate() {
+        this.log.debug("Scheduling next update in %ims", this.idlePollIntervalMillis);
+        this.refreshToken = setTimeout(() => {
+            this.log.debug("Executing scheduled update");
+            this.refreshStatusForUser();
+        }, this.idlePollIntervalMillis);
+    }
+
+    parseState(state: any) {
+        const mappedState = {
+            running: state.cleanMissionStatus.phase === "run",
+            paused: state.cleanMissionStatus.phase === "pause",
+            docking: state.cleanMissionStatus.phase === "hmPostMsn",
+            batteryLevel: state.batPct,
+            charging: state.cleanMissionStatus.phase === "charge",
+            binFull: state.bin.full,
         };
+
+        return mappedState;
     }
 
-    runningStatus(status) {
-        return status.running ? Characteristic.ContactSensorState.CONTACT_DETECTED
-                              : Characteristic.ContactSensorState.CONTACT_NOT_DETECTED;
+    mergeCachedStatus(newStatus: any) {
+        this.cachedStatus = Object.assign({}, this.cachedStatus, newStatus);
+        this.lastRefreshState = Date.now();
     }
 
-    batteryLevelStatus(status) {
-        return status.batteryLevel;
+    startPolling() {
+        this.log.debug("Starting poll for device state");
+
+        this.refreshState((success) => {
+            if (success) {
+                this.log.debug("Initial state obtained, setting up polling");
+                this.scheduleNextUpdate();
+            } else {
+                this.log.debug("Failed to obtain initial state, retrying");
+                setTimeout(() => this.startPolling(), 10_000);
+            }
+        });
     }
 
-    chargingStatus(status) {
-        return status.charging ? Characteristic.ChargingState.CHARGING
-                               : Characteristic.ChargingState.NOT_CHARGING;
-    }
-
-    batteryStatus(status) {
-        return status.batteryLevel !== undefined && status.batteryLevel <= 20
-            ? Characteristic.StatusLowBattery.BATTERY_LEVEL_LOW
-            : Characteristic.StatusLowBattery.BATTERY_LEVEL_NORMAL;
-    }
-
-    binStatus(status) {
-        return status.binFull ? Characteristic.FilterChangeIndication.CHANGE_FILTER
-                              : Characteristic.FilterChangeIndication.FILTER_OK;
-    }
-
-    dockedStatus(status) {
-        return status.docking ? Characteristic.ContactSensorState.CONTACT_DETECTED
-                              : Characteristic.ContactSensorState.CONTACT_NOT_DETECTED;
-    }
-
-    dockingStatus(status) {
-        return status.docking ? Characteristic.ContactSensorState.CONTACT_DETECTED
-                              : Characteristic.ContactSensorState.CONTACT_NOT_DETECTED;
-    }
-}
-
-module.exports = RoombaAccessory;
+    module.exports = RoombaAccessory;
