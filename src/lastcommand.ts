@@ -16,7 +16,7 @@ IRobot.on('connect', init);
 function init(): void {
   IRobot.getRobotState(['lastCommand'])
 	.then((result: { lastCommand: { regions: any } }) => {
-	  console.log("lastCommand:", result.lastCommand, ", regionsDetails:", result.lastCommand.regions);
+	  console.log('lastCommand:', result.lastCommand, ', regionsDetails:', result.lastCommand.regions);
 	  IRobot.end();
 	})
 	.catch(console.log);

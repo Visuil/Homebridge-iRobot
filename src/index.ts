@@ -1,10 +1,7 @@
-import { API } from "homebridge";
-import { PLATFORM_NAME } from "./settings";
-import IRobotPlatform from "./platform";
+import { API } from 'homebridge';
+import { PLATFORM_NAME, PLUGIN_NAME } from './settings';
+import { IRobotPlatform } from './platform';
 
-/**
- * This method registers the platform with Homebridge
- */
-export = (api: API): void => {
-	api.registerPlatform(PLATFORM_NAME, IRobotPlatform);
+export = (api: API) => {
+  api.registerPlatform(PLATFORM_NAME, IRobotPlatform);
 };
