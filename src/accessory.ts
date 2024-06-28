@@ -385,7 +385,8 @@ export class IRobotAccessory implements AccessoryPlugin {
 
 	promise.then((holder) => {
 	  holder.useCount++;
-	  callback(null, holder.IRobot).finally(() => {
+	  holder.IRobot; // Ensure the promise resolves with the IRobot instance
+	  callback(null, holder.IRobot).finally(() => { // Use finally after the callback
 		holder.useCount--;
 
 		if (holder.useCount <= 0) {
@@ -496,117 +497,51 @@ export class IRobotAccessory implements AccessoryPlugin {
   }
 
   private setDockingState(docking: boolean, callback: (error?: Error) => void) {
-	this.log.debug("Setting docking state to %s", JSON.stringify(docking));
-
-	this.connect((error, IRobot) => {
-	  if (error || !IRobot) {
-		callback(error || new Error("Unknown error"));
-		return;
-	  }
-
-	  if (docking) {
-		IRobot.dock().then(() => {
-		  this.log.debug("IRobot is docking");
-				  callback();
-				  this.refreshStatusForUser();
-				}).catch((err: Error) => {
-				  this.log.warn("IRobot failed: %s", err.message);
-				  callback(err);
-				});
-			  } else {
-				IRobot.pause().then(() => {
-				  this.log.debug("IRobot is paused");
-				  callback();
-				  this.refreshStatusForUser();
-				}).catch((err: Error) => {
-				  this.log.warn("IRobot failed: %s", err.message);
-				  callback(err);
-				});
-			  }
-			});
-		  }
-		
-		  private async dockWhenStopped(IRobot: any, pollingInterval: number) {
-			try {
-			  const state = await IRobot.getRobotState(["cleanMissionStatus"]);
-		
-			  switch (state.cleanMissionStatus.phase) {
-				case "stop":
-				  this.log.debug("IRobot has stopped, issuing dock request");
-				  await IRobot.dock();
-				  this.log.debug("IRobot docking");
-				  this.refreshStatusForUser();
-				  break;
-				case "run":
-				  this.log.debug("IRobot is still running. Will check again in %is", pollingInterval / 1000);
-				  await delay(pollingInterval);
-				  this.log.debug("Trying to dock again...");
-				  await this.dockWhenStopped(IRobot, pollingInterval);
-				  break;
-				default:
-				  this.log.debug("IRobot is in unexpected state: %s", state.cleanMissionStatus.phase);
-				  break;
-			  }
-			} catch (error) {
-			  this.log.warn("IRobot failed to dock: %s", (error as Error).message);
-			}
-		  }
-		
-		  refreshStatusForUser() {
-			this.log.debug("Fetching updated status for user");
-		
-			if (this.refreshToken) {
-			  clearTimeout(this.refreshToken);
-			  this.refreshToken = null;
-			}
-		
-			this.refreshState((success) => {
-			  if (success) {
-				this.log.debug("User status updated, scheduling next update");
-				this.scheduleNextUpdate();
-			  } else {
-				this.log.debug("Failed to update user status");
-			  }
-			});
-		  }
-		
-		  scheduleNextUpdate() {
-			this.log.debug("Scheduling next update in %ims", this.idlePollIntervalMillis);
-			this.refreshToken = setTimeout(() => {
-			  this.log.debug("Executing scheduled update");
-			  this.refreshStatusForUser();
-			}, this.idlePollIntervalMillis);
-		  }
-		
-		  parseState(state: any) {
-			const mappedState = {
-			  running: state.cleanMissionStatus.phase === "run",
-			  paused: state.cleanMissionStatus.phase === "pause",
-			  docking: state.cleanMissionStatus.phase === "hmPostMsn",
-			  batteryLevel: state.batPct,
-			  charging: state.cleanMissionStatus.phase === "charge",
-			  binFull: state.bin.full,
-			};
-		
-			return mappedState;
-		  }
-		
-		  mergeCachedStatus(newStatus: any) {
-			this.cachedStatus = Object.assign({}, this.cachedStatus, newStatus);
-			this.lastRefreshState = Date.now();
-		  }
-		
-		  startPolling() {
-			this.log.debug("Starting poll for device state");
-		
-			this.refreshState((success) => {
-			  if (success) {
 				this.log.debug("Initial state obtained, setting up polling");
-				this.scheduleNextUpdate();
-			  } else {
-				this.log.debug("Failed to obtain initial state, retrying");
-				setTimeout(() => this.startPolling(), 10_000);
-			  }
-			});
-		  }
+		  this.scheduleNextUpdate();
+		} else {
+		  this.log.debug("Failed to obtain initial state, retrying");
+		  setTimeout(() => this.startPolling(), 10_000);
 		}
+	  });
+	}
+  
+	private createCharacteristicGetter(name: string, extractValue: (status: IRobotStatus) => any): (callback: (error: Error | null, value?: any) => void) => void {
+	  return (callback: (error: Error | null, value?: any) => void) => {
+		const value = extractValue(this.cachedStatus);
+		if (value === undefined) {
+		  callback(NO_VALUE);
+		} else {
+		  callback(null, value);
+		}
+	  };
+	}
+  
+	private runningStatus(status: IRobotStatus): HBCharacteristic.ContactSensorState {
+	  return status.running ? this.api.hap.Characteristic.ContactSensorState.CONTACT_DETECTED : this.api.hap.Characteristic.ContactSensorState.CONTACT_NOT_DETECTED;
+	}
+  
+	private batteryLevelStatus(status: IRobotStatus): number {
+	  return status.batteryLevel || 0;
+	}
+  
+	private chargingStatus(status: IRobotStatus): HBCharacteristic.ChargingState {
+	  return status.charging ? this.api.hap.Characteristic.ChargingState.CHARGING : this.api.hap.Characteristic.ChargingState.NOT_CHARGING;
+	}
+  
+	private batteryStatus(status: IRobotStatus): HBCharacteristic.StatusLowBattery {
+	  return status.batteryLevel !== undefined && status.batteryLevel <= 20 ? this.api.hap.Characteristic.StatusLowBattery.BATTERY_LEVEL_LOW : this.api.hap.Characteristic.StatusLowBattery.BATTERY_LEVEL_NORMAL;
+	}
+  
+	private binStatus(status: IRobotStatus): HBCharacteristic.FilterChangeIndication {
+	  return status.binFull ? this.api.hap.Characteristic.FilterChangeIndication.CHANGE_FILTER : this.api.hap.Characteristic.FilterChangeIndication.FILTER_OK;
+	}
+  
+	private dockedStatus(status: IRobotStatus): HBCharacteristic.ContactSensorState {
+	  return status.docking ? this.api.hap.Characteristic.ContactSensorState.CONTACT_DETECTED : this.api.hap.Characteristic.ContactSensorState.CONTACT_NOT_DETECTED;
+	}
+  
+	private dockingStatus(status: IRobotStatus): HBCharacteristic.ContactSensorState {
+	  return status.docking ? this.api.hap.Characteristic.ContactSensorState.CONTACT_DETECTED : this.api.hap.Characteristic.ContactSensorState.CONTACT_NOT_DETECTED;
+	}
+  }
