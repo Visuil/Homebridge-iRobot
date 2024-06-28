@@ -67,7 +67,7 @@ interface IRobotStatus {
 	docking?: boolean;
 }
 
-class IRobotAccessory implements AccessoryPlugin {
+export class IRobotAccessory implements AccessoryPlugin {
 	private readonly api: API;
 	private readonly log: Logging;
 	private readonly debug: boolean;
@@ -600,5 +600,4 @@ class IRobotAccessory implements AccessoryPlugin {
 			}
 		});
 	}
-
-	module.exports = IRobotAccessory;
+}
