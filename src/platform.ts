@@ -92,3 +92,5 @@ class IRobotPlatform implements DynamicPlatformPlugin {
 export = (api: API): void => {
   api.registerPlatform(PLATFORM_NAME, IRobotPlatform);
 };
+
+export { IRobotPlatform };

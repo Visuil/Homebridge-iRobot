@@ -1,5 +1,6 @@
 import dorita980 from "dorita980";
 import { Local } from "dorita980";
+import { CharacteristicEventTypes } from 'hap-nodejs';
 import {
   AccessoryPlugin,
   Logging,
@@ -171,51 +172,51 @@ export class IRobotAccessory implements AccessoryPlugin {
 
   private registerEventHandlers() {
 	this.switchService
-	  .getCharacteristic(this.api.hap.Characteristic.On)
-	  .on("set", this.setRunningState.bind(this))
-	  .on("get", this.createCharacteristicGetter("Running status", this.runningStatus.bind(this)));
+		.getCharacteristic(this.api.hap.Characteristic.On)
+  		.on(CharacteristicEventTypes.SET, this.setRunningState.bind(this))
+  		.on(CharacteristicEventTypes.GET, this.createCharacteristicGetter("Running status", this.runningStatus.bind(this)));
 
 	this.batteryService
-	  .getCharacteristic(this.api.hap.Characteristic.BatteryLevel)
-	  .on("get", this.createCharacteristicGetter("Battery level", this.batteryLevelStatus.bind(this)));
+  		.getCharacteristic(this.api.hap.Characteristic.BatteryLevel)
+  		.on(CharacteristicEventTypes.GET, this.createCharacteristicGetter("Battery level", this.batteryLevelStatus.bind(this)));
 
 	this.batteryService
 	  .getCharacteristic(this.api.hap.Characteristic.ChargingState)
-	  .on("get", this.createCharacteristicGetter("Charging status", this.chargingStatus.bind(this)));
+	  .on(CharacteristicEventTypes.GET, this.createCharacteristicGetter("Charging status", this.chargingStatus.bind(this)));
 
 	this.batteryService
 	  .getCharacteristic(this.api.hap.Characteristic.StatusLowBattery)
-	  .on("get", this.createCharacteristicGetter("Low Battery status", this.batteryStatus.bind(this)));
+	  .on(CharacteristicEventTypes.GET, this.createCharacteristicGetter("Low Battery status", this.batteryStatus.bind(this)));
 
 	this.filterMaintenance
 	  .getCharacteristic(this.api.hap.Characteristic.FilterChangeIndication)
-	  .on("get", this.createCharacteristicGetter("Bin status", this.binStatus.bind(this)));
+	  .on(CharacteristicEventTypes.GET, this.createCharacteristicGetter("Bin status", this.binStatus.bind(this)));
 
 	if (this.dockService) {
 	  this.dockService
 		.getCharacteristic(this.api.hap.Characteristic.ContactSensorState)
-		.on("get", this.createCharacteristicGetter("Dock status", this.dockedStatus.bind(this)));
+		.on(CharacteristicEventTypes.GET, this.createCharacteristicGetter("Dock status", this.dockedStatus.bind(this)));
 	}
 	if (this.runningService) {
 	  this.runningService
 		.getCharacteristic(this.api.hap.Characteristic.ContactSensorState)
-		.on("get", this.createCharacteristicGetter("Running status", this.runningStatus.bind(this)));
+		.on(CharacteristicEventTypes.GET, this.createCharacteristicGetter("Running status", this.runningStatus.bind(this)));
 	}
 	if (this.binService) {
 	  this.binService
 		.getCharacteristic(this.api.hap.Characteristic.ContactSensorState)
-		.on("get", this.createCharacteristicGetter("Bin status", this.binStatus.bind(this)));
+		.on(CharacteristicEventTypes.GET, this.createCharacteristicGetter("Bin status", this.binStatus.bind(this)));
 	}
 	if (this.dockingService) {
 	  this.dockingService
 		.getCharacteristic(this.api.hap.Characteristic.ContactSensorState)
-		.on("get", this.createCharacteristicGetter("Docking status", this.dockingStatus.bind(this)));
+		.on(CharacteristicEventTypes.GET, this.createCharacteristicGetter("Docking status", this.dockingStatus.bind(this)));
 	}
 	if (this.homeService) {
 	  this.homeService
 		.getCharacteristic(this.api.hap.Characteristic.On)
-		.on("set", this.setDockingState.bind(this))
-		.on("get", this.createCharacteristicGetter("Returning Home", this.dockingStatus.bind(this)));
+		.on(CharacteristicEventTypes.SET, this.setDockingState.bind(this))
+		.on(CharacteristicEventTypes.GET, this.createCharacteristicGetter("Returning Home", this.dockingStatus.bind(this)));
 	}
   }
 
@@ -333,7 +334,7 @@ export class IRobotAccessory implements AccessoryPlugin {
 		reject(new Error("Connect timed out"));
 	  }, CONNECT_TIMEOUT_MILLIS);
 
-	  IRobot.on("state", (state: IRobotStatus) => { this.receiveRobotState(state); });
+	  IRobot.on("state", (state: any) => { this.receiveRobotState(state); });
 
 	  const onError = (error: Error) => {
 		this.log.debug("Connection received error: %s", error.message);
@@ -385,16 +386,17 @@ export class IRobotAccessory implements AccessoryPlugin {
 
 	promise.then((holder) => {
 	  holder.useCount++;
-	  callback(null, holder.IRobot).finally(() => {
+	  Promise.resolve().then(() => {
+		callback(null, holder.IRobot);
+	  }).finally(() => {
 		holder.useCount--;
-
 		if (holder.useCount <= 0) {
 		  this._currentIRobotPromise = undefined;
 		  holder.IRobot.end();
 		} else {
 		  this.log.debug("Leaving IRobot instance with %i ongoing requests", holder.useCount);
 		}
-	  });
+	  });	  
 	}).catch((error) => {
 	  this._currentIRobotPromise = undefined;
 	  callback(error);
@@ -619,31 +621,31 @@ export class IRobotAccessory implements AccessoryPlugin {
 	  }
 	  
 	  private runningStatus(): boolean {
-		return this.cachedStatus.running;
+		return this.cachedStatus.running ?? false;
 	  }
 	  
 	  private batteryLevelStatus(): number {
-		return this.cachedStatus.batteryLevel;
+		return this.cachedStatus.batteryLevel ?? 0;
 	  }
 	  
 	  private chargingStatus(): boolean {
-		return this.cachedStatus.charging;
+		return this.cachedStatus.charging ?? false;
 	  }
 	  
 	  private batteryStatus(): number {
-		return this.cachedStatus.batteryLevel < 20 ? 1 : 0;  // Example threshold for low battery
+		return (this.cachedStatus.batteryLevel ?? 0) < 20 ? 1 : 0;  // Example threshold for low battery
 	  }
 	  
 	  private binStatus(): boolean {
-		return this.cachedStatus.binFull;
+		return this.cachedStatus.binFull ?? false;
 	  }
 	  
 	  private dockedStatus(): boolean {
-		return this.cachedStatus.docking;
+		return this.cachedStatus.docking ?? false;
 	  }
 	  
 	  private dockingStatus(): boolean {
-		return this.cachedStatus.docking;
-	  }
+		return this.cachedStatus.docking ?? false;
+	  }	  
   }
   

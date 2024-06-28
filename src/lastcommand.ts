@@ -14,10 +14,10 @@ const IRobot = new dorita980.Local(robot_blid, robot_pwd, robot_ip_address);
 IRobot.on('connect', init);
 
 function init(): void {
-  IRobot.getRobotState(['lastCommand'])
-	.then((result: { lastCommand: { regions: any } }) => {
+	IRobot.getRobotState(['lastCommand'])
+	.then((result: any) => {  // Using `any` for flexibility
 	  console.log('lastCommand:', result.lastCommand, ', regionsDetails:', result.lastCommand.regions);
 	  IRobot.end();
 	})
-	.catch(console.log);
+	.catch(console.log);  
 }
