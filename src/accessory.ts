@@ -610,40 +610,40 @@ export class IRobotAccessory implements AccessoryPlugin {
 		}
 	  });
 	}
-  }
-  private createCharacteristicGetter(name: string, handler: () => any) {
-	return (callback: (error: Error | null, data: any) => void) => {
-	  this.log.debug(`Getting ${name}`);
-	  handler();
-	  callback(null, handler());
-	};
-  }
-  
-  private runningStatus(): boolean {
-	return this.cachedStatus.running;
-  }
-  
-  private batteryLevelStatus(): number {
-	return this.cachedStatus.batteryLevel;
-  }
-  
-  private chargingStatus(): boolean {
-	return this.cachedStatus.charging;
-  }
-  
-  private batteryStatus(): number {
-	return this.cachedStatus.batteryLevel < 20 ? 1 : 0;  // Example threshold for low battery
-  }
-  
-  private binStatus(): boolean {
-	return this.cachedStatus.binFull;
-  }
-  
-  private dockedStatus(): boolean {
-	return this.cachedStatus.docking;
-  }
-  
-  private dockingStatus(): boolean {
-	return this.cachedStatus.docking;
+	private createCharacteristicGetter(name: string, handler: () => any) {
+		return (callback: (error: Error | null, data: any) => void) => {
+		  this.log.debug(`Getting ${name}`);
+		  handler();
+		  callback(null, handler());
+		};
+	  }
+	  
+	  private runningStatus(): boolean {
+		return this.cachedStatus.running;
+	  }
+	  
+	  private batteryLevelStatus(): number {
+		return this.cachedStatus.batteryLevel;
+	  }
+	  
+	  private chargingStatus(): boolean {
+		return this.cachedStatus.charging;
+	  }
+	  
+	  private batteryStatus(): number {
+		return this.cachedStatus.batteryLevel < 20 ? 1 : 0;  // Example threshold for low battery
+	  }
+	  
+	  private binStatus(): boolean {
+		return this.cachedStatus.binFull;
+	  }
+	  
+	  private dockedStatus(): boolean {
+		return this.cachedStatus.docking;
+	  }
+	  
+	  private dockingStatus(): boolean {
+		return this.cachedStatus.docking;
+	  }
   }
   
