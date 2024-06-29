@@ -1,13 +1,7 @@
-import dorita980 from "dorita980";
+import dorita980, { RobotMission, RobotState, Roomba } from "dorita980";
 import { Local } from "dorita980";
-import { CharacteristicEventTypes } from 'hap-nodejs';
-import {
-  AccessoryPlugin,
-  Logging,
-  API,
-  Characteristic as HBCharacteristic,
-  Service as HBService
-} from "homebridge";
+import { CharacteristicEventTypes, Service, Characteristic } from 'hap-nodejs';
+import { AccessoryConfig, AccessoryPlugin, API, Logging, Service, CharacteristicValue, CharacteristicGetCallback, CharacteristicSetCallback } from "homebridge";
 import { promises as fsPromises } from "fs";
 import path from "path";
 
@@ -172,54 +166,56 @@ export class IRobotAccessory implements AccessoryPlugin {
   }
 
   private registerEventHandlers() {
+	const Characteristic = this.api.hap.Characteristic;
+	
 	this.switchService
-		.getCharacteristic(this.api.hap.Characteristic.On)
-  		.on('set', this.setRunningState.bind(this))
-  		.on('get', this.createCharacteristicGetter("Running status", this.runningStatus.bind(this)));
-
+		.getCharacteristic(Characteristic.On)
+		.on("set", this.setRunningState.bind(this))
+		.on("get", this.createCharacteristicGetter("Running status", this.runningStatus.bind(this)));
+  
 	this.batteryService
-  		.getCharacteristic(this.api.hap.Characteristic.BatteryLevel)
-  		.on('get', this.createCharacteristicGetter("Battery level", this.batteryLevelStatus.bind(this)));
-
+		.getCharacteristic(Characteristic.BatteryLevel)
+		.on("get", this.createCharacteristicGetter("Battery level", this.batteryLevelStatus.bind(this)));
+  
 	this.batteryService
-	  .getCharacteristic(this.api.hap.Characteristic.ChargingState)
-	  .on('get', this.createCharacteristicGetter("Charging status", this.chargingStatus.bind(this)));
-
+		.getCharacteristic(Characteristic.ChargingState)
+		.on("get", this.createCharacteristicGetter("Charging status", this.chargingStatus.bind(this)));
+  
 	this.batteryService
-	  .getCharacteristic(this.api.hap.Characteristic.StatusLowBattery)
-	  .on('get', this.createCharacteristicGetter("Low Battery status", this.batteryStatus.bind(this)));
-
+		.getCharacteristic(Characteristic.StatusLowBattery)
+		.on("get", this.createCharacteristicGetter("Low Battery status", this.batteryStatus.bind(this)));
+  
 	this.filterMaintenance
-	  .getCharacteristic(this.api.hap.Characteristic.FilterChangeIndication)
-	  .on('get', this.createCharacteristicGetter("Bin status", this.binStatus.bind(this)));
-
+		.getCharacteristic(Characteristic.FilterChangeIndication)
+		.on("get", this.createCharacteristicGetter("Bin status", this.binStatus.bind(this)));
+  
 	if (this.dockService) {
 	  this.dockService
-		.getCharacteristic(this.api.hap.Characteristic.ContactSensorState)
-		.on('get', this.createCharacteristicGetter("Dock status", this.dockedStatus.bind(this)));
+		  .getCharacteristic(Characteristic.ContactSensorState)
+		  .on("get", this.createCharacteristicGetter("Dock status", this.dockedStatus.bind(this)));
 	}
 	if (this.runningService) {
 	  this.runningService
-		.getCharacteristic(this.api.hap.Characteristic.ContactSensorState)
-		.on('get', this.createCharacteristicGetter("Running status", this.runningStatus.bind(this)));
+		  .getCharacteristic(Characteristic.ContactSensorState)
+		  .on("get", this.createCharacteristicGetter("Running status", this.runningStatus.bind(this)));
 	}
 	if (this.binService) {
 	  this.binService
-		.getCharacteristic(this.api.hap.Characteristic.ContactSensorState)
-		.on('get', this.createCharacteristicGetter("Bin status", this.binStatus.bind(this)));
+		  .getCharacteristic(Characteristic.ContactSensorState)
+		  .on("get", this.createCharacteristicGetter("Bin status", this.binStatus.bind(this)));
 	}
 	if (this.dockingService) {
 	  this.dockingService
-		.getCharacteristic(this.api.hap.Characteristic.ContactSensorState)
-		.on('get', this.createCharacteristicGetter("Docking status", this.dockingStatus.bind(this)));
+		  .getCharacteristic(Characteristic.ContactSensorState)
+		  .on("get", this.createCharacteristicGetter("Docking status", this.dockingStatus.bind(this)));
 	}
 	if (this.homeService) {
 	  this.homeService
-		.getCharacteristic(this.api.hap.Characteristic.On)
-		.on('set', this.setDockingState.bind(this))
-		.on('get', this.createCharacteristicGetter("Returning Home", this.dockingStatus.bind(this)));
+		  .getCharacteristic(Characteristic.On)
+		  .on("set", this.setDockingState.bind(this))
+		  .on("get", this.createCharacteristicGetter("Returning Home", this.dockingStatus.bind(this)));
 	}
-  }
+  }  
 
   identify() {
 	this.log.info("Identify requested");
