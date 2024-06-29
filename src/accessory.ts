@@ -90,15 +90,15 @@ export class IRobotAccessory implements AccessoryPlugin {
   private cachedStatus: IRobotStatus = {};
   private _currentIRobotPromise?: Promise<{ IRobot: any, useCount: number }>;
   private currentCipherIndex: number = 0;
-  private readonly accessoryInfo: HBService;
-  private readonly filterMaintenance: HBService;
-  private readonly switchService: HBService;
-  private readonly batteryService: HBService;
-  private dockService?: HBService;
-  private runningService?: HBService;
-  private binService?: HBService;
-  private dockingService?: HBService;
-  private homeService?: HBService;
+  private readonly accessoryInfo: Service;
+  private readonly filterMaintenance: Service;
+  private readonly switchService: Service;
+  private readonly batteryService: Service;
+  private dockService?: Service;
+  private runningService?: Service;
+  private binService?: Service;
+  private dockingService?: Service;
+  private homeService?: Service;
   private refreshToken?: NodeJS.Timeout;
 
   constructor(log: Logging, config: Config, api: API) {
