@@ -229,7 +229,7 @@ export class IRobotAccessory implements AccessoryPlugin {
 	});
   }
 
-  getServices(): HBService[] {
+  getServices(): Service[] {
 	const services = [
 	  this.accessoryInfo,
 	  this.switchService,
